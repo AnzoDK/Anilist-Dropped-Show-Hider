@@ -12,6 +12,11 @@
 
 var elementsToProcess = [];
 var g_isAwaitingRetry = false;
+var g_buttonElement = null;
+var g_styleElement = null;
+var g_toggled = false;
+var g_disabledColor = "#182a34";
+var g_activeColor = "#3db4f2";
 
 function checker_callback(elements)
 {
@@ -86,9 +91,25 @@ const config = { attributes: false, childList: true, subtree: false };
 // Create an observer instance linked to the callback function
 const observer = new MutationObserver(callback_result);
 
-function SetUp_DroppedHider_Styles()
+function ToggleDroppedShows()
 {
+  g_toggled = !g_toggled;
+  g_buttonElement.style.backgroundColor = g_toggled ? g_activeColor : g_disabledColor;
+  ToggleStyle(g_toggled);
+  
+  
+}
 
+function ToggleStyle(state)
+{
+  var head = document.head || document.getElementsByTagName('head')[0];
+  if(!state && g_styleElement != null)
+  {
+    head.removeChild(g_styleElement);
+    g_styleElement = null;
+    return;
+  }
+  
   var style = document.createElement("style");
   style.type = 'text/css';
 
@@ -104,9 +125,29 @@ function SetUp_DroppedHider_Styles()
     style.appendChild(document.createTextNode(css));
   }
 
-  var head = document.head || document.getElementsByTagName('head')[0];
+  
   head.appendChild(style);
+  g_styleElement = style;
+}
 
+function SetUp_CreateHideButton()
+{
+  var btn = document.createElement("button");
+  btn.id = "toggleDroppedBtn";
+  btn.appendChild(document.createTextNode("Toggle Dropped Shows!!"));
+  btn.onclick = ToggleDroppedShows;
+  btn.style.backgroundColor = "#3db4f2";
+  btn.style.color = "white";
+  btn.style.borderRadius = "6px";
+  document.getElementsByClassName("filters")[0].appendChild(btn);
+  g_buttonElement = btn;
+}
+
+function SetUp_DroppedHider_Styles()
+{
+
+  ToggleStyle(true);
+  
   console.log("DroppedHider - Styles initilized");
 
 }
