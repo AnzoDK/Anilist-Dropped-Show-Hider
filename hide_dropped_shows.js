@@ -161,5 +161,5 @@ function SetUp_DroppedHider()
 }
 
 SetUp_DroppedHider_Styles();
-
+SetUp_CreateHideButton();
 SetUp_DroppedHider();
