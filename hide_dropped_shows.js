@@ -6,7 +6,7 @@
 // @grant       none
 // @version     1.1.0
 // @author      AnzoDK
-// @downloadURL https://github.com/AnzoDK/Anilist-Toggle-Scores/releases/latest/download/toggle_anilist_scores.js
+// @downloadURL https://github.com/AnzoDK/Anilist-Dropped-Show-Hider/releases/latest/download/hide_dropped_shows.js
 // @description 14.3.2026, 11.51.46
 // ==/UserScript==
 
