@@ -3,11 +3,12 @@
 // @namespace   Violentmonkey Scripts
 // @match       https://anilist.co/search/anime*
 // @icon        data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACHklEQVQ4T5VTX0hTcRT+zu7drsp0i9hsYxVmD6WbEEVFD0I9BL4HEfUUhEUZlRquPxhBBUUGaUTLoJZSQgRCxBLKKEYUGwaZD4EaMfAlYkLpuN57T/f3g81mf7YO3IfL73zf+c4536FQfaTFZLoM5kYAZH/lBIPoo0J8kgJrmj7Y4HA5qN9yiMYpUBexllRmTdPIQQ7oCzoMckocGbk/1WBBwPkXy7IQCa9HtOMoaqrdeJr+hPMzfnBlDTyJXmjTaVt5cZdFBIZpovPYIXQePyI5x7/p2J5U8XWe4B46herUMKCoRUoKBMyMZV4P4v292LRxg0zKmYy9b4HHGZQmENWbt21F/E6fBGdnZxEMrEBsCmhNcWkC0f/Z6Akcbt2PVHoMo6+SspWp74wto4zc3dN/byEvf+h+zB5iAwYePEJi5Dn6rl2C2+PF7jeMkav/mIGQv3NHM2I3elBVVYlsNosfc/Oo9fugqioGP1s42F5CwZWL3di3ZxcMw4CuLxQmLQhFGy3xMUx+yYAcCtgy4U0OwpmZANWubuRQMICHtvy19XV48fI1eq7fkgRN4XU409UuVR14D/RPL27QPRCVMyHfqgbebK+tq6MNFZoLN2/fw/CTZzLT71uOC+eiWBkKIjHD6J4oeE4aq2LyHaSVFUUhl9MlQcK+pj2TfNi2hrC1iDljkcC2tvwp65jElpZaWDKKY/rlnP/vIm2wOOefuwrlqMNkePsAAAAASUVORK5CYII=
-// @license     MIT
-// @version     1.1.2
+// @grant       none
+// @version     1.1.5
 // @author      AnzoDK
 // @downloadURL https://github.com/AnzoDK/Anilist-Dropped-Show-Hider/releases/latest/download/hide_dropped_shows.js
 // @description 14.3.2026, 11.51.46
+// @require https://code.jquery.com/jquery-3.6.0.min.js
 // ==/UserScript==
 
 var elementsToProcess = [];
@@ -37,15 +38,6 @@ function checker_callback(elements)
         }
           if(tmpArr[i].firstChild.classList.contains("loading"))
           {
-
-            /*const observer = new MutationObserver( (mutationList, observer) =>
-                                                  {
-                                                      for(const mutation of mutationList)
-                                                        {
-                                                          elementsToProcess.push(...mutation.addedNodes)
-                                                        }
-                                                  } );
-            observer.observe(tmpArr[i], {attributes:false,childList:true,subtree:true});*/
             elementsToProcess.push(tmpArr[i]);
             if(!g_isAwaitingRetry)
             {
@@ -60,7 +52,12 @@ function checker_callback(elements)
             //This means we're not in the normal media-card view mode - and then we abort
             return;
           }
-          if(tmpArr[i].children[1].children[1].children[1].children[0].attributes.getNamedItem("status").value == "Dropped")
+          var status = tmpArr[i].children[1].children[1].children[1].children[0].attributes.getNamedItem("status");
+          if(!status)
+            {
+              continue;
+            }
+          if(status.value == "Dropped")
           {
             tmpArr[i].classList.add("dropped-show");
             console.log(tmpArr[i]);
@@ -84,7 +81,7 @@ const callback_result = (mutationList, observer) => {
   setTimeout(checker_callback(null),3000); //Await the loading of the elements :)
 };
 // Select the node that will be observed for mutations
-const targetNode = document.getElementsByClassName("results chart")[0];
+var targetNode = document.getElementsByClassName("results chart")[0];
 
 // Options for the observer (which mutations to observe)
 const config = { attributes: false, childList: true, subtree: false };
@@ -142,8 +139,16 @@ function SetUp_CreateHideButton()
   btn.style.backgroundColor = g_toggled ? g_activeColor : g_disabledColor; ;
   btn.style.color = "white";
   btn.style.borderRadius = "6px";
-  document.getElementsByClassName("filters")[0].appendChild(btn);
+  var filters = document.getElementsByClassName("filters")[0];
+  if(!filters)
+  {
+    console.warn("Failed to locate filters.. - Are they not loaded yet? - Trying again in 2s...");
+    setTimeout(SetUp_CreateHideButton,2000);
+    return;
+  }
+  filters.appendChild(btn);
   g_buttonElement = btn;
+  console.log("DroppedHider - Button initilized")
 }
 
 function SetUp_DroppedHider_Styles()
@@ -161,8 +166,52 @@ function SetUp_DroppedHider()
 // Start observing the target node for configured mutations
   observer.observe(targetNode, config);
   console.log("DroppedHider - Observer initilized");
+
 }
 
+function SetUp_Remaining(mutationList, observer)
+{
+  for (const mutation of mutationList)
+    {
+      if(document.getElementsByClassName("results chart")[0])
+        {
+          targetNode = document.getElementsByClassName("results chart")[0];
+          SetUp_CreateHideButton();
+          SetUp_DroppedHider();
+          observer.disconnect();
+          return;
+        }
+      for (var node of mutation.addedNodes)
+        {
+          var cList = node.classList;
+          if(cList)
+          {
+            if(cList.contains("results chart"))
+              {
+                targetNode = document.getElementsByClassName("results chart")[0];
+                SetUp_CreateHideButton();
+                SetUp_DroppedHider();
+                observer.disconnect();
+              }
+          }
+
+        }
+    }
+
+}
+const mo = new MutationObserver(SetUp_Remaining);
+if(!targetNode)
+  {
+    mo.observe(document.body, { attributes: false, childList: true, subtree: true });
+  }
+else
+  {
+    SetUp_CreateHideButton();
+    SetUp_DroppedHider();
+  }
+
 SetUp_DroppedHider_Styles();
-SetUp_CreateHideButton();
-SetUp_DroppedHider();
+
+
+
+
