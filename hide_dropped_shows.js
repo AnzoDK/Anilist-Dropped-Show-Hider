@@ -1,15 +1,16 @@
 // ==UserScript==
 // @name        Dropped Show Hider
 // @namespace   Violentmonkey Scripts
-// @match       https://anilist.co/search/anime*
+// @match       https://anilist.co/*
 // @icon        data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACHklEQVQ4T5VTX0hTcRT+zu7drsp0i9hsYxVmD6WbEEVFD0I9BL4HEfUUhEUZlRquPxhBBUUGaUTLoJZSQgRCxBLKKEYUGwaZD4EaMfAlYkLpuN57T/f3g81mf7YO3IfL73zf+c4536FQfaTFZLoM5kYAZH/lBIPoo0J8kgJrmj7Y4HA5qN9yiMYpUBexllRmTdPIQQ7oCzoMckocGbk/1WBBwPkXy7IQCa9HtOMoaqrdeJr+hPMzfnBlDTyJXmjTaVt5cZdFBIZpovPYIXQePyI5x7/p2J5U8XWe4B46herUMKCoRUoKBMyMZV4P4v292LRxg0zKmYy9b4HHGZQmENWbt21F/E6fBGdnZxEMrEBsCmhNcWkC0f/Z6Akcbt2PVHoMo6+SspWp74wto4zc3dN/byEvf+h+zB5iAwYePEJi5Dn6rl2C2+PF7jeMkav/mIGQv3NHM2I3elBVVYlsNosfc/Oo9fugqioGP1s42F5CwZWL3di3ZxcMw4CuLxQmLQhFGy3xMUx+yYAcCtgy4U0OwpmZANWubuRQMICHtvy19XV48fI1eq7fkgRN4XU409UuVR14D/RPL27QPRCVMyHfqgbebK+tq6MNFZoLN2/fw/CTZzLT71uOC+eiWBkKIjHD6J4oeE4aq2LyHaSVFUUhl9MlQcK+pj2TfNi2hrC1iDljkcC2tvwp65jElpZaWDKKY/rlnP/vIm2wOOefuwrlqMNkePsAAAAASUVORK5CYII=
 // @grant       none
 // @license     MIT
-// @version     1.2.3
+// @version     1.2.4
 // @author      AnzoDK
-// @downloadURL https://github.com/AnzoDK/Anilist-Dropped-Show-Hider/releases/latest/download/hide_dropped_shows.js
 // @description 14.3.2026, 11.51.46
 // @require https://code.jquery.com/jquery-3.6.0.min.js
+// @downloadURL https://update.greasyfork.org/scripts/569656/Dropped%20Show%20Hider.user.js
+// @updateURL https://update.greasyfork.org/scripts/569656/Dropped%20Show%20Hider.meta.js
 // ==/UserScript==
 
 var elementsToProcess = [];
@@ -24,6 +25,32 @@ var g_validStatuses = ["Watching","Rewatching","Completed","Paused","Planning","
 var g_statusesToHide = ["Dropped"];
 var g_disabledColor = "#182a34";
 var g_activeColor = "#3db4f2";
+
+const mo = new MutationObserver(SetUp_Remaining);
+const pageUrlObserver = new MutationObserver(CheckURL);
+
+function CheckURL(mutationList, observer)
+{
+  if(!document.body.contains(targetNode))
+  {
+     console.log("[DroppedHider] Lost search filter node - Assuming we switched page - Resetting to Initial state");
+     var oldBtnWrapper = document.getElementById("toggleHiddenWrapper");
+     if(oldBtnWrapper != null) //Delete duplicate btn spawned by Anilist's cache
+     {
+       oldBtnWrapper.parentNode.removeChild(oldBtnWrapper);
+     }
+     //var elementsToProcess = [];
+     var g_isAwaitingRetry = false;
+     var g_buttonElement = null;
+     var g_settingsBtnElement = null;
+     var g_styleElement = null;
+     var g_toggled = false;
+     var g_modalElement = null;
+     var g_modalVisible = false;
+     AttatchInitObserver();
+     observer.disconnect();
+  }
+}
 
 function checker_callback(elements)
 {
@@ -256,11 +283,11 @@ function SetUp_CreateHideButtonSettingsModal()
     label_option.style.padding = "10px";
     label_option.style.width = "100px";
     option.style.margin = "auto";
-    
+
 
     option.style.width = "20px";
     option.style.height = "20px";
-    
+
     label_option.appendChild(document.createTextNode(g_validStatuses[i]));
     arrLabels.push(label_option);
     arrOptions.push(option);
@@ -278,7 +305,7 @@ function SetUp_CreateHideButtonSettingsModal()
   closeBtn.appendChild(document.createTextNode("Close"));
   closeBtn.onclick = ToggleSettingsModal;
   modal.appendChild(closeBtn);
-    
+
   document.body.appendChild(modal);
   g_modalElement = document.getElementById("hiddenSettingsModal");
   console.log("DroppedHider - Modal initilized")
@@ -329,6 +356,11 @@ function SetUp_DroppedHider()
 
 }
 
+function SetUp_URLObserver()
+{
+  pageUrlObserver.observe(document.head, { attributes: false, childList: true, subtree: true });
+}
+
 function SetUp_Remaining(mutationList, observer)
 {
   for (const mutation of mutationList)
@@ -340,16 +372,22 @@ function SetUp_Remaining(mutationList, observer)
           SetUp_CreateHideButtonSettings();
           SetUp_CreateHideButtonSettingsModal();
           SetUp_DroppedHider();
+          SetUp_URLObserver();
           observer.disconnect();
           return;
         }
     }
 
 }
-const mo = new MutationObserver(SetUp_Remaining);
+
+function AttatchInitObserver()
+{
+  mo.observe(document.body, { attributes: false, childList: true, subtree: true });
+}
+
 if(!targetNode)
   {
-    mo.observe(document.body, { attributes: false, childList: true, subtree: true });
+    AttatchInitObserver();
   }
 else
   {
@@ -357,6 +395,7 @@ else
     SetUp_CreateHideButtonSettings();
     SetUp_CreateHideButtonSettingsModal();
     SetUp_DroppedHider();
+    SetUp_URLObserver();
   }
 
 SetUp_DroppedHider_Styles();
